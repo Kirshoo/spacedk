@@ -9,7 +9,7 @@ import (
 func TestDateOnlyUnmarshal(t *testing.T) {
 	var date DateOnlyTime
 	
-	data := []byte("2025-07-27")
+	data := []byte("\"2025-07-27\"")
 	if err := json.Unmarshal(data, &date); err != nil {
 		t.Errorf("Unmarshal error: %v", err)
 		return
@@ -24,31 +24,16 @@ func TestPoiSymbolType(t *testing.T) {
 	testWaypoint := "7H"
 	SymbolArray := []string{testSector, testSystem, testWaypoint}
 
-	var poi PoiSymbol
+	var waypoint WaypointSymbol
 
-	testData := []byte(strings.Join(SymbolArray, "-"))
-	if err := json.Unmarshal(data, &poi); err != nil {
+	testData := []byte("\"" + strings.Join(SymbolArray, "-") + "\"")
+	if err := waypoint.UnmarshalJSON(testData); err != nil {
 		t.Errorf("Unmarshal error: %v", err)
 		return
 	}
 
-	if poi.Full != string(testData) {
+	if waypoint.String() != strings.Trim(string(testData), "\"") {
 		t.Errorf("Error: invalid full (have '%s', need '%s')",
-			poi.Full, string(testData))
-	}
-
-	if poi.Sector != testSector {
-		t.Errorf("Error: unexpected sector: want '%s', got 's'", 
-			testSector, poi.Sector)
-	}
-
-	if poi.System != testSystem {
-		t.Errorf("Error: unexpected system: want '%s', got 's'", 
-			testSystem, poi.System)
-	}
-
-	if poi.Waypoint != testSector {
-		t.Errorf("Error: unexpected waypoint: want '%s', got 's'", 
-			testWaypoint, poi.Waypoint)
+			waypoint.String(), strings.Trim(string(testData), "\""))
 	}
 }
