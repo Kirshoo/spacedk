@@ -14,6 +14,7 @@ type Client struct {
 	network http.Client
 	baseURL string
 	token string
+	userAgent string
 
 	Agents *AgentService
 	Contracts *ContractService
@@ -24,6 +25,7 @@ type Client struct {
 
 const (
 	DefaultBaseURL string = "https://api.spacetraders.io/v2"
+	defaultUserAgent string = "spacedk/0.1.0 (+https://github.com/Kirshoo/spacedk)"
 )
 
 var (
@@ -33,6 +35,7 @@ var (
 type ClientConfig struct {
 	BaseURL string
 	Token string
+	UserAgent string
 }
 
 type ClientOption func(*ClientConfig)
@@ -48,9 +51,16 @@ func WithToken(token string) ClientOption {
 	}
 }
 
+func WithUserAgent(ua string) ClientOption {
+	return func(cfg *ClientConfig) {
+		cfg.UserAgent = ua
+	}
+}
+
 func NewClient(opts ...ClientOption) *Client {
 	config := ClientConfig{
 		BaseURL: DefaultBaseURL,
+		UserAgent: defaultUserAgent,
 	}
 	
 	for _, opt := range opts {
@@ -61,6 +71,7 @@ func NewClient(opts ...ClientOption) *Client {
 		network: http.Client{},
 		baseURL: config.BaseURL,
 		token: config.Token,
+		userAgent: config.UserAgent,
 	}
 
 	c.Agents = NewAgentService(c)
@@ -95,6 +106,8 @@ func (c *Client) Execute(request endpoints.ApiEndpoint) (*http.Response, error) 
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
+
+	req.Header.Add("User-Agent", c.userAgent)
 
 	for key, val := range request.Headers() {
 		req.Header.Add(key, val)
