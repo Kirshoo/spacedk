@@ -83,6 +83,11 @@ func NewClient(opts ...ClientOption) *Client {
 	return c
 }
 
+// May be used to change between different agents
+func (c *Client) SetToken(newToken string) {
+	c.token = newToken
+}
+
 func (c *Client) Execute(request endpoints.ApiEndpoint) (*http.Response, error) {
 	if request.IsTokenRequired() && c.token == "" {
 		return nil, fmt.Errorf("token is required, client is missing a token")

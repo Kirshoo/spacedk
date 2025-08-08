@@ -5,6 +5,7 @@ import (
 	"time"
 	"strings"
 	"encoding/json"
+	"regexp"
 )
 
 // Currency is a shorthand for int64
@@ -141,5 +142,39 @@ func (s *WaypointSymbol) UnmarshalJSON(data []byte) error {
 	s.Sector = parts[0]
 	s.System = parts[1]
 	s.Waypoint = parts[2]
+	return nil
+}
+
+const (
+	// Symbol validation constants
+	minSymbolLength int = 3
+	maxSymbolLength int = 14
+
+	validSymbolRegex string = "^[a-zA-Z0-9-_]+$"
+)
+
+var (
+	matchValidChars = regexp.MustCompile(validSymbolRegex).MatchString
+)
+
+func validateAgentSymbol(symbol string) error {
+	errors := NewMultiError()
+
+	if len(symbol) < minSymbolLength || len(symbol) > maxSymbolLength {
+		lengthError := fmt.Errorf("symbol length must be between %d and %d (have %d)",
+			minSymbolLength, maxSymbolLength, len(symbol))
+		errors.Add(lengthError)
+	}
+
+	if !matchValidChars(symbol) {
+		invalidCharError := fmt.Errorf("symbol contains invalid characters (must match /%s/)",
+			validSymbolRegex)
+		errors.Add(invalidCharError)
+	}
+
+	if errors.HasErrors() {
+		return errors
+	}
+
 	return nil
 }

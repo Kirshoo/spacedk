@@ -13,6 +13,22 @@ type Metadata struct {
 	Limit int `json:"limit"`
 }
 
+type Account struct {
+	Id string `json:"id"`
+	Email string `json:"email"`
+	Token string `json:"token"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type RegistrationConfig struct {
+	AgentSymbol string
+	FactionSymbol FactionSymbol
+}
+
+func (cfg *RegistrationConfig) Validate() error {
+	return validateAgentSymbol(cfg.AgentSymbol)
+}
+
 type Agent struct {
 	Symbol string `json:"symbol"`
 	HQ WaypointSymbol `json:"headquarters"`
