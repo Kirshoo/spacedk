@@ -21,11 +21,19 @@ type Client struct {
 	Factions *FactionService
 	Fleet *FleetService
 	Systems *SystemService
+
+	eventScheduler *EventScheduler
+	// Channel for events transmitted by sdk
+	// Look at [EventType] to see what types of events
+	// can be transmitted
+	Events chan *Event
+	stopDispatch chan struct{}
 }
 
 const (
 	DefaultBaseURL string = "https://api.spacetraders.io/v2"
 	defaultUserAgent string = "spacedk/0.1.0 (+https://github.com/Kirshoo/spacedk)"
+	defaultEventBufferSize int = 0
 )
 
 var (
@@ -36,6 +44,7 @@ type ClientConfig struct {
 	BaseURL string
 	Token string
 	UserAgent string
+	EventBufferSize int
 }
 
 type ClientOption func(*ClientConfig)
@@ -57,10 +66,17 @@ func WithUserAgent(ua string) ClientOption {
 	}
 }
 
+func WithEventBufferSize(size int) ClientOption {
+	return func(cfg *ClientConfig) {
+		cfg.EventBufferSize = size
+	}
+}
+
 func NewClient(opts ...ClientOption) *Client {
 	config := ClientConfig{
 		BaseURL: DefaultBaseURL,
 		UserAgent: defaultUserAgent,
+		EventBufferSize: defaultEventBufferSize,
 	}
 	
 	for _, opt := range opts {
@@ -72,6 +88,7 @@ func NewClient(opts ...ClientOption) *Client {
 		baseURL: config.BaseURL,
 		token: config.Token,
 		userAgent: config.UserAgent,
+		Events: make(chan *Event, config.EventBufferSize),
 	}
 
 	c.Agents = NewAgentService(c)
@@ -80,12 +97,23 @@ func NewClient(opts ...ClientOption) *Client {
 	c.Fleet = NewFleetService(c)
 	c.Systems = NewSystemService(c)
 
+	c.eventScheduler = NewEventScheduler(c.Events)
+	c.stopDispatch = make(chan struct{})
+
 	return c
 }
 
 // May be used to change between different agents
 func (c *Client) SetToken(newToken string) {
 	c.token = newToken
+}
+
+func (c *Client) StartDispatch() {
+	c.eventScheduler.StartDispatch(c.stopDispatch)
+}
+
+func (c *Client) StopDispatch() {
+	close(c.stopDispatch)
 }
 
 func (c *Client) Execute(request endpoints.ApiEndpoint) (*http.Response, error) {
