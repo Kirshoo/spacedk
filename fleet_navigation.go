@@ -1,6 +1,8 @@
 package spacedk
 
-import "github.com/Kirshoo/spacedk/requests"
+import (
+	"github.com/Kirshoo/spacedk/requests"
+)
 
 func (s *FleetService) GetShipNavigation(symbol string) (*NavigationInfo, error) {
 	req := &requests.GetNavigationEndpoint{ShipSymbol: symbol}
@@ -56,6 +58,20 @@ func (s *FleetService) JumpShip(symbol string, destination WaypointSymbol) (*Nav
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
+
+	ctx := map[string]string{
+		"shipSymbol": symbol, 
+	}
+
+	cdEvent := Event{
+		Type: CooldownExpiredEvent,
+		Context: ctx,
+	}
+
+	s.client.eventScheduler.Add(
+		&cdEvent, 
+		reply.Data.Cooldown.ExpiresAt,
+	)
 
 	return &reply.Data.Navigation, &reply.Data.Cooldown, &reply.Data.Transaction, &reply.Data.Agent, nil
 }

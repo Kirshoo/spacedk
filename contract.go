@@ -54,6 +54,20 @@ func (s *ContractService) Accept(id string) (*Contract, *Agent, error) {
 		return nil, nil, err
 	}
 
+	// Add contract deadline reached event to scheduler
+	ctx := map[string]string{
+		"contractId": reply.Data.Contract.Id,
+	}
+
+	event := Event{
+		Type: ContractDeadlineEvent,
+		Context: ctx,
+	}
+	s.client.eventScheduler.Add(
+		&event, 
+		reply.Data.Contract.Terms.Deadline,
+	)
+
 	return &reply.Data.Contract, &reply.Data.Agent, nil
 }
 
@@ -64,6 +78,17 @@ func (s *ContractService) Fulfill(id string) (*Contract, *Agent, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Remove deadline reached event from scheduler
+	ctx := map[string]string{
+		"contractId": reply.Data.Contract.Id,
+	}
+
+	event := Event{
+		Type: ContractDeadlineEvent,
+		Context: ctx,
+	}
+	s.client.eventScheduler.Remove(&event)
 
 	return &reply.Data.Contract, &reply.Data.Agent, nil
 }
