@@ -53,3 +53,12 @@ func (m *MultiError) Error() string {
 
 	return strings.Join(errMsgs, "; ")
 }
+
+
+type AgentNotTrackedError struct {
+	Agent string
+}
+
+func (e AgentNotTrackedError) Error() string {
+	return fmt.Sprintf("agent '%s' is not tracked", e.Agent)
+}

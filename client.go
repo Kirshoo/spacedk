@@ -16,6 +16,9 @@ type Client struct {
 	token string
 	userAgent string
 
+	agentManager *AgentManager
+
+	Account *AccountService
 	Agents *AgentService
 	Contracts *ContractService
 	Factions *FactionService
@@ -74,6 +77,9 @@ func NewClient(opts ...ClientOption) *Client {
 		userAgent: config.UserAgent,
 	}
 
+	c.agentManager = NewAgentManager(c)
+
+	c.Account = NewAccountService(c)
 	c.Agents = NewAgentService(c)
 	c.Contracts = NewContractService(c)
 	c.Factions = NewFactionService(c)
@@ -83,11 +89,40 @@ func NewClient(opts ...ClientOption) *Client {
 	return c
 }
 
+// #### AgentManager forwarding #####
+
 // May be used to change between different agents
-func (c *Client) SetToken(newToken string) {
+func (c *Client) setToken(newToken string) {
 	c.token = newToken
 }
 
+func (c *Client) SwitchAgent(agent string) error {
+	if err := c.agentManager.SetActive(agent); err != nil {
+		return fmt.Errorf("switching agents: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Client) CurrentAgent() string {
+	return c.agentManager.ActiveAgent()
+}
+
+func (c *Client) AvailableAgents() []string {
+	return c.agentManager.TrackedAgents()
+}
+
+func (c *Client) SaveAgentTokens(filepath string) error {
+	return c.agentManager.SaveAgents(filepath)
+}
+
+func (c *Client) LoadAgentTokens(filepath string) error {
+	return c.agentManager.LoadAgents(filepath)
+}
+
+// ##### Request Handling #####
+
+// TODO: Add rate limits
 func (c *Client) Execute(request endpoints.ApiEndpoint) (*http.Response, error) {
 	if request.IsTokenRequired() && c.token == "" {
 		return nil, fmt.Errorf("token is required, client is missing a token")
@@ -155,7 +190,7 @@ func (c *Client) Handle(resp *http.Response, v any, opts ...HandlerOption) error
 		body, _ := io.ReadAll(resp.Body)
 		return handler(resp.StatusCode, body, resp.Header, v)
 	}
-	
+
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		// Some error occurred
 		var apiErr ApiError
@@ -167,7 +202,11 @@ func (c *Client) Handle(resp *http.Response, v any, opts ...HandlerOption) error
 	}
 
 	if v != nil {
-		return json.NewDecoder(resp.Body).Decode(v)
+		if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+			return fmt.Errorf("decoding body: %w", err)
+		}
+		
+		return nil
 	}
 
 	return nil

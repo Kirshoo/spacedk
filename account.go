@@ -6,11 +6,6 @@ import (
 )
 
 type (
-	AccountServiceInterface interface {
-		Get() (*Account, error)
-		RegisterAgent(cfg RegistrationConfig, accountToken string) (*OwnAgent, *Faction, *Contract, []Ship, error)
-	}
-
 	AccountService struct {
 		client *Client
 	}
@@ -66,7 +61,10 @@ func (s *AccountService) RegisterAgent(cfg RegistrationConfig, accToken string) 
 		return nil, nil, nil, nil, err
 	}
 
-	s.client.SetToken(reply.Data.Token)
+	s.client.agentManager.AddAgentAndSwitch(
+		cfg.AgentSymbol,
+		reply.Data.Token,
+	)
 
 	return &reply.Data.Agent, &reply.Data.Faction, &reply.Data.Contract, reply.Data.Ships, nil
 }
