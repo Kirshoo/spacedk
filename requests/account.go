@@ -38,7 +38,7 @@ type RegisterAgentEndpoint struct {
 }
 
 func (e *RegisterAgentEndpoint) Method() string {
-	return http.MethodGet
+	return http.MethodPost
 }
 
 func (e *RegisterAgentEndpoint) Path() string {
